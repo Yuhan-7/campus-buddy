@@ -63,3 +63,15 @@ CREATE TABLE IF NOT EXISTS invitations (
  INDEX idx_receiver(receiver_id,status), CONSTRAINT fk_inv_need FOREIGN KEY (need_id) REFERENCES needs(id),
  CONSTRAINT fk_inv_sender FOREIGN KEY (sender_id) REFERENCES users(id), CONSTRAINT fk_inv_receiver FOREIGN KEY (receiver_id) REFERENCES users(id)
 );
+CREATE TABLE IF NOT EXISTS login_attempts (
+ user_id BIGINT PRIMARY KEY, failures INT NOT NULL DEFAULT 0, locked_until DATETIME(3) NULL,
+ CONSTRAINT fk_login_attempt_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS privacy_consents (
+ user_id BIGINT PRIMARY KEY, policy_version VARCHAR(20) NOT NULL, agreed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ CONSTRAINT fk_consent_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS deleted_users (
+ user_id BIGINT PRIMARY KEY, deleted_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ CONSTRAINT fk_deleted_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

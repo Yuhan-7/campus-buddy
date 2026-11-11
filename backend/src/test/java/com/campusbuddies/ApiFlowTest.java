@@ -17,10 +17,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ApiFlowTest {
  @Autowired MockMvc mvc; @Autowired ObjectMapper json;
  private JsonNode data(MvcResult r)throws Exception{return json.readTree(r.getResponse().getContentAsString());}
- private void register(String email)throws Exception{mvc.perform(post("/api/register").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\""+email+"\",\"password\":\"password123\"}")).andExpect(status().isOk());}
+ private void register(String email)throws Exception{mvc.perform(post("/api/register").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\""+email+"\",\"password\":\"password123\",\"agree_privacy\":true}")).andExpect(status().isOk());}
  private Cookie login(String account)throws Exception{MvcResult r=mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content("{\"account\":\""+account+"\",\"password\":\"password123\"}")).andExpect(status().isOk()).andReturn();return new Cookie("buddy_session",r.getResponse().getHeader("Set-Cookie").split("=")[1].split(";")[0]);}
  @Test void registrationAndAdminAccess()throws Exception{
-  mvc.perform(post("/api/register").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"bad..mail@test.example\",\"password\":\"password123\"}")).andExpect(status().isBadRequest());
+  mvc.perform(post("/api/register").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"bad..mail@test.example\",\"password\":\"password123\",\"agree_privacy\":true}")).andExpect(status().isBadRequest());
   register("member@test.example");Cookie member=login("member@test.example");mvc.perform(get("/api/admin/overview").cookie(member)).andExpect(status().isForbidden());
   MvcResult r=mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON).content("{\"account\":\"admin@test.example\",\"password\":\"adminpassword123\"}")).andExpect(status().isOk()).andReturn();Cookie admin=new Cookie("buddy_session",r.getResponse().getHeader("Set-Cookie").split("=")[1].split(";")[0]);mvc.perform(get("/api/admin/overview").cookie(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.users.length()").isNumber());
  }

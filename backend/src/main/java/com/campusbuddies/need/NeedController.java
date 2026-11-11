@@ -69,7 +69,8 @@ public class NeedController {
     String q = keyword.trim().toLowerCase(Locale.ROOT);
     if (q.length() > 40) throw ApiException.bad("关键词最多 40 字");
     if (!q.isEmpty()) {
-      sql.append(" AND LOWER(CONCAT(n.title,' ',n.description,' ',n.tags)) LIKE ?");
+      // tags 为 TEXT（H2 中是 CLOB），先转为定长字符串再 LIKE，MySQL 与 H2 均可执行；拼接后最长约 1000 字
+      sql.append(" AND LOWER(CAST(CONCAT(n.title,' ',n.description,' ',n.tags) AS CHAR(1200))) LIKE ?");
       args.add(Inputs.likePattern(q));
     }
     sql.append(" ORDER BY n.created_at DESC, n.id DESC LIMIT ? OFFSET ?");

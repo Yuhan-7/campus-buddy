@@ -39,3 +39,8 @@ label.checkbox{display:flex;align-items:center;gap:8px;margin:0}label.checkbox i
 @media(max-width:900px){.a11y-toggles{order:2}}
 .header-user button.primary{color:#fff;margin-top:0;padding:9px 16px}
 .hero-browse{margin-top:18px;font-size:16px}
+.pwd-field{position:relative;display:block}.pwd-field input{padding-right:46px}
+.pwd-field .eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;padding:6px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#4f6475}
+.pwd-field .eye svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.field-error{display:block;color:#a33a3a;margin-top:4px}
+.pwd-field{margin-top:6px}.pwd-field input{margin-top:0}

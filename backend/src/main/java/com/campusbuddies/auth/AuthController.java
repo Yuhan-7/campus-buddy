@@ -50,7 +50,7 @@ public class AuthController {
     sessions.sameOrigin(req);
     String email = str(data, "email").toLowerCase(Locale.ROOT);
     String password = str(data, "password");
-    if (!Inputs.validEmail(email) || password.length() < 8 || password.length() > 100) throw ApiException.bad("请填写有效邮箱和 8–100 位密码");
+    if (!Inputs.validEmail(email) || password.length() < 8 || password.length() > 20) throw ApiException.bad("请填写有效邮箱和 8–20 位密码");
     // 公约第三条：采集数据前须说明用途，并取得用户同意
     if (!Boolean.TRUE.equals(data.get("agree_privacy"))) throw ApiException.bad("请先阅读并同意《个人信息使用说明》");
     String nickname = accounts.newNickname();
@@ -96,7 +96,7 @@ public class AuthController {
     Map<String, Object> user = sessions.requireUser(req);
     String current = str(data, "current_password"), next = str(data, "new_password");
     if (!accounts.matches(current, user.get("password_hash"))) throw ApiException.bad("当前密码不正确");
-    require(next, 8, 100, "新密码须为 8–100 位");
+    require(next, 8, 20, "新密码须为 8–20 位");
     if (current.equals(next)) throw ApiException.bad("新密码不能与当前密码相同");
     db.update("UPDATE users SET password_hash=? WHERE id=?", accounts.encode(next), Db.id(user));
     db.update("DELETE FROM sessions WHERE user_id=? AND token_hash<>?", Db.id(user), SessionService.hash(sessions.token(req)));
@@ -150,7 +150,7 @@ public class AuthController {
   @PostMapping("/reset-password")
   Map<String, Object> resetPassword(@RequestBody Map<String, Object> data, HttpServletRequest req) {
     sessions.sameOrigin(req);
-    String next = require(str(data, "new_password"), 8, 100, "新密码须为 8–100 位");
+    String next = require(str(data, "new_password"), 8, 20, "新密码须为 8–20 位");
     Map<String, Object> user = accounts.find(str(data, "account"));
     if (user == null) throw ApiException.bad("账号或密保答案不正确");
     long userId = Db.id(user);

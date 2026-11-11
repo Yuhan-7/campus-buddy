@@ -60,6 +60,8 @@ watch(prefs, value => {
 const mode = ref('login')
 const credentials = ref({ account: '', password: '' })
 const agreePrivacy = ref(false)
+const confirmPassword = ref('')
+const visible = ref({}) // 各密码框的“小眼睛”显示状态
 const privacy = ref(null)
 const showPrivacy = ref(false)
 const emptyResetForm = () => ({ account: '', answers: ['', '', ''], new_password: '' })
@@ -76,10 +78,13 @@ async function openPrivacy() {
 function submitAuth() {
   return run(async () => {
     if (mode.value === 'register') {
+      if (credentials.value.password !== confirmPassword.value) throw new Error('两次输入的密码不一致')
       if (!agreePrivacy.value) throw new Error('请先阅读并勾选同意《个人信息使用说明》')
       const r = await api('/register', 'POST', { email: credentials.value.account, password: credentials.value.password, agree_privacy: true })
       mode.value = 'login'
       credentials.value.password = ''
+      confirmPassword.value = ''
+      visible.value = {}
       notify(`注册成功，你的账号 ID 是 ${r.account_id}，请登录`)
     } else {
       await api('/login', 'POST', credentials.value)
@@ -458,8 +463,15 @@ onBeforeUnmount(() => {
       <label>{{ mode === 'login' ? '邮箱或账号 ID' : '邮箱' }}
         <input v-model="credentials.account" :type="mode === 'register' ? 'email' : 'text'" :autocomplete="mode === 'register' ? 'email' : 'username'" required>
       </label>
-      <label>密码（8–100 位）
-        <input v-model="credentials.password" type="password" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" minlength="8" maxlength="100" required>
+      <label>{{ mode === 'login' ? '密码' : '密码（8–20 位）' }}
+        <span class="pwd-field">
+          <input v-model="credentials.password" :type="visible.auth ? 'text' : 'password'" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" :minlength="mode === 'register' ? 8 : null" :maxlength="mode === 'register' ? 20 : null" required>
+          <button type="button" class="eye" :aria-label="visible.auth ? '隐藏密码' : '显示密码'" :aria-pressed="!!visible.auth" @click="visible.auth = !visible.auth"><svg v-if="!visible.auth" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M17.9 17.9A10.8 10.8 0 0 1 12 19c-7 0-11-7-11-7a19.8 19.8 0 0 1 5.1-5.9M9.9 4.2A10 10 0 0 1 12 4c7 0 11 7 11 7a19.9 19.9 0 0 1-2.2 3.2M1 1l22 22"/><path d="M14.1 14.1a3 3 0 0 1-4.2-4.2"/></svg></button>
+        </span>
+      </label>
+      <label v-if="mode === 'register'">再次输入密码
+        <input v-model="confirmPassword" type="password" autocomplete="new-password" maxlength="20" required>
+        <small v-if="confirmPassword && confirmPassword !== credentials.password" class="field-error" role="alert">两次输入的密码不一致</small>
       </label>
       <div v-if="mode === 'register'" class="consent">
         <label class="checkbox"><input v-model="agreePrivacy" type="checkbox"> 我已阅读并同意</label>
@@ -476,7 +488,7 @@ onBeforeUnmount(() => {
       <button type="button" :disabled="busy || !resetForm.account.trim()" @click="loadResetQuestions">查看密保问题</button>
       <template v-if="resetQuestions.length === 3">
         <label v-for="(q, index) in resetQuestions" :key="q.question_no">{{ q.question }}<input v-model="resetForm.answers[index]" autocomplete="off"></label>
-        <label>新密码<input v-model="resetForm.new_password" type="password" minlength="8" autocomplete="new-password" required></label>
+        <label>新密码（8–20 位）<span class="pwd-field"><input v-model="resetForm.new_password" :type="visible.reset ? 'text' : 'password'" minlength="8" maxlength="20" autocomplete="new-password" required><button type="button" class="eye" :aria-label="visible.reset ? '隐藏密码' : '显示密码'" :aria-pressed="!!visible.reset" @click="visible.reset = !visible.reset"><svg v-if="!visible.reset" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M17.9 17.9A10.8 10.8 0 0 1 12 19c-7 0-11-7-11-7a19.8 19.8 0 0 1 5.1-5.9M9.9 4.2A10 10 0 0 1 12 4c7 0 11 7 11 7a19.9 19.9 0 0 1-2.2 3.2M1 1l22 22"/><path d="M14.1 14.1a3 3 0 0 1-4.2-4.2"/></svg></button></span></label>
         <button class="primary full" type="submit" :disabled="busy">重置密码</button>
       </template>
       <button type="button" class="link" @click="mode = 'login'">返回登录</button>
@@ -656,7 +668,7 @@ onBeforeUnmount(() => {
           <label>年级<select v-model="profile.grade"><option v-for="g in GRADES" :key="g" :value="g">{{ g || '暂不填写' }}</option></select></label>
           <label>家乡<input v-model="profile.hometown" maxlength="40"></label>
           <label class="span2">个人介绍<textarea v-model="profile.bio" rows="3" maxlength="300"></textarea></label>
-          <label class="span2">性格特点（逗号分隔）<input v-model="profile.personality" placeholder="开朗，耐心"></label>
+          <label class="span2">性格特点<input v-model="profile.personality" placeholder="开朗，耐心"></label>
           <label>兴趣<input v-model="profile.interests" placeholder="羽毛球，摄影"></label>
           <label>擅长技能<input v-model="profile.skills" placeholder="Python，吉他"></label>
           <label class="span2">想学习的技能<input v-model="profile.wants"></label>
@@ -681,7 +693,7 @@ onBeforeUnmount(() => {
           <form @submit.prevent="changePassword">
             <h3>修改密码</h3>
             <label>当前密码<input v-model="passwords.current_password" type="password" autocomplete="current-password" required></label>
-            <label>新密码（8–100 位）<input v-model="passwords.new_password" type="password" minlength="8" autocomplete="new-password" required></label>
+            <label>新密码（8–20 位）<span class="pwd-field"><input v-model="passwords.new_password" :type="visible.change ? 'text' : 'password'" minlength="8" maxlength="20" autocomplete="new-password" required><button type="button" class="eye" :aria-label="visible.change ? '隐藏密码' : '显示密码'" :aria-pressed="!!visible.change" @click="visible.change = !visible.change"><svg v-if="!visible.change" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="M17.9 17.9A10.8 10.8 0 0 1 12 19c-7 0-11-7-11-7a19.8 19.8 0 0 1 5.1-5.9M9.9 4.2A10 10 0 0 1 12 4c7 0 11 7 11 7a19.9 19.9 0 0 1-2.2 3.2M1 1l22 22"/><path d="M14.1 14.1a3 3 0 0 1-4.2-4.2"/></svg></button></span></label>
             <button type="submit" :disabled="busy">修改密码</button>
           </form>
           <form @submit.prevent="saveSecurityQuestions">

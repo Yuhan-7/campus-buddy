@@ -5,6 +5,7 @@ import com.campusbuddies.common.Db;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,7 @@ import java.util.Map;
  * 2. 按 .env 中的 ADMIN_EMAIL / ADMIN_PASSWORD 初始化管理员（只执行一次）。
  */
 @Component
+@Order(1)
 public class StartupInitializer implements ApplicationRunner {
   private final Db db;
   private final AccountService accounts;

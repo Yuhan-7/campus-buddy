@@ -18,7 +18,7 @@ const PAGE_HINTS = {
 
 // ---------- 全局状态 ----------
 const user = ref(null)
-const page = ref('plaza')
+const page = ref('auth') // 未登录时先显示登录/注册页；页面上的“先随便看看”可免注册浏览广场
 const busy = ref(false)
 const online = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
 const toast = ref(null) // { text, kind, undo }
@@ -134,7 +134,8 @@ function clearSession() {
   myNeeds.value = []
   matches.value = []
   contacts.value = {}
-  go('plaza')
+  mode.value = 'login'
+  go('auth')
 }
 
 async function logout() {
@@ -424,7 +425,7 @@ onBeforeUnmount(() => {
       <span class="brand-icon" aria-hidden="true">✦</span>
       <div><strong>校园搭子</strong><small>找到同频的人，一起出发</small></div>
     </div>
-    <nav aria-label="主导航">
+    <nav v-if="user || page !== 'auth'" aria-label="主导航">
       <button v-for="x in navItems" :key="x[0]" :class="{ active: page === x[0] }" :aria-current="page === x[0] ? 'page' : null" @click="go(x[0])">{{ x[1] }}</button>
     </nav>
     <div class="a11y-toggles" role="group" aria-label="显示设置">
@@ -432,7 +433,7 @@ onBeforeUnmount(() => {
       <button type="button" :aria-pressed="prefs.contrast" @click="prefs.contrast = !prefs.contrast">高对比</button>
     </div>
     <div v-if="user" class="header-user">{{ user.name }} <button @click="logout">退出</button></div>
-    <div v-else class="header-user"><button class="primary" @click="mode = 'login'; go('auth')">登录 / 注册</button></div>
+    <div v-else-if="page !== 'auth'" class="header-user"><button class="primary" @click="mode = 'login'; go('auth')">登录 / 注册</button></div>
   </header>
 
   <div v-if="!online" class="offline-banner" role="alert">网络已断开，页面内容可能不是最新的。恢复网络后操作会自动可用。</div>
@@ -444,7 +445,7 @@ onBeforeUnmount(() => {
       <h1>下一次同行，<br>从这里开始。</h1>
       <p>找学习、运动、兴趣与技能互助搭子。只有双方同意后，才能查看彼此联系方式。</p>
       <div class="hero-pills"><span>✎ 一起学习</span><span>◉ 一起运动</span><span>✦ 交换技能</span></div>
-      <button type="button" class="link" @click="go('plaza')">先随便看看需求广场 →</button>
+      <button type="button" class="link hero-browse" @click="go('plaza')">不想注册？先随便看看需求广场 →</button>
     </section>
 
     <form v-if="mode !== 'reset'" class="auth-card" @submit.prevent="submitAuth">

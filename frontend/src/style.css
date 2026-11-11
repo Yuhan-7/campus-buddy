@@ -38,3 +38,4 @@ label.checkbox{display:flex;align-items:center;gap:8px;margin:0}label.checkbox i
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}.card:hover,.trend-list button:hover{transform:none}}
 @media(max-width:900px){.a11y-toggles{order:2}}
 .header-user button.primary{color:#fff;margin-top:0;padding:9px 16px}
+.hero-browse{margin-top:18px;font-size:16px}

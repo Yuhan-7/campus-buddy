@@ -95,10 +95,14 @@ public class AdminController {
     return Map.of("ok", true);
   }
 
-  /** 普通用户查看收到的站内信。 */
+  /** 普通用户查看收到的站内信；管理员查看自己发出的站内信（含接收人）。 */
   @GetMapping("/messages")
   Map<String, Object> messages(HttpServletRequest req) {
     long myId = Db.id(sessions.requireUser(req));
+    if (sessions.isAdmin(myId)) {
+      return Map.of("messages", db.rows("SELECT m.id,m.need_id,n.title need_title,m.body,m.created_at,r.name receiver_name FROM admin_messages m"
+          + " JOIN needs n ON n.id=m.need_id JOIN users r ON r.id=m.receiver_id WHERE m.sender_id=? ORDER BY m.created_at DESC LIMIT 200", myId));
+    }
     return Map.of("messages", db.rows("SELECT m.id,m.need_id,n.title need_title,m.body,m.created_at,s.name sender_name FROM admin_messages m"
         + " JOIN needs n ON n.id=m.need_id JOIN users s ON s.id=m.sender_id WHERE m.receiver_id=? ORDER BY m.created_at DESC LIMIT 100", myId));
   }

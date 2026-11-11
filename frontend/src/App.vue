@@ -11,7 +11,7 @@ const PAGE_HINTS = {
   plaza: '看看大家正在寻找怎样的搭子。',
   recommend: '发布需求，再根据共同时间、兴趣与技能找到候选。',
   invitations: '每一次连接，都由双方共同决定。',
-  messages: '查看管理员发来的通知。',
+  messages: '查看站内信记录。',
   profile: '介绍自己，让合适的人更容易找到你。',
   admin: '查看用户、需求与邀请，并处理需要管理的内容。'
 }
@@ -125,7 +125,7 @@ async function refresh() {
       wants: r.user.wants.join('，')
     }
     if (page.value === 'auth' || (page.value === 'admin' && !r.user.admin)) page.value = 'plaza'
-    if (r.user.admin && (page.value === 'recommend' || page.value === 'invitations')) page.value = 'admin'
+    if (r.user.admin && ['recommend', 'invitations', 'profile'].includes(page.value)) page.value = 'admin'
   } catch {
     user.value = null // 未登录或会话过期：以访客身份浏览
   }
@@ -153,7 +153,8 @@ const navItems = computed(() => {
   if (!user.value) return [['plaza', '需求广场']]
   const items = [['plaza', '需求广场']]
   if (!user.value.admin) items.push(['recommend', '发布与匹配'], ['invitations', '我的邀请'])
-  items.push(['messages', '站内信'], ['profile', '个人资料'])
+  items.push(['messages', '站内信'])
+  if (!user.value.admin) items.push(['profile', '个人资料'])
   if (user.value.admin) items.push(['admin', '管理端'])
   return items
 })
@@ -313,7 +314,13 @@ function handleInvitation(i, type) {
   })
 }
 
-function showContacts(i) {
+function toggleContacts(i) {
+  if (contacts.value[i.id]) {
+    const next = { ...contacts.value }
+    delete next[i.id]
+    contacts.value = next
+    return
+  }
   return run(async () => {
     contacts.value = { ...contacts.value, [i.id]: (await api('/contacts/' + i.id)).contacts }
   })
@@ -508,7 +515,7 @@ onBeforeUnmount(() => {
         你正在以访客身份浏览。<button class="link" @click="mode = 'register'; go('auth')">免费注册</button>后可以发布需求、查看资料和发送邀请。
       </div>
       <section class="trending" aria-labelledby="trending-title">
-        <h2 id="trending-title">热门搭子主题 · 近 7 天</h2>
+        <h2 id="trending-title">热门搭子主题</h2>
         <div v-if="trending.length" class="trend-list">
           <button v-for="t in trending" :key="t.topic" @click="categoryFilter = ''; query = t.topic">
             <strong>{{ t.topic }}搭子</strong><span>{{ t.posts }} 条需求 · {{ t.views_7d }} 次浏览</span>
@@ -522,6 +529,7 @@ onBeforeUnmount(() => {
           <option value="">全部类型</option>
           <option v-for="c in CATEGORIES" :key="c">{{ c }}</option>
         </select>
+        <button v-if="query || categoryFilter" type="button" @click="query = ''; categoryFilter = ''">清除筛选</button>
         <span aria-live="polite">已显示 {{ needs.length }} 条{{ hasMore ? '，还有更多' : '' }}</span>
       </div>
       <div class="grid">
@@ -650,7 +658,7 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
-          <button :disabled="busy" @click="showContacts(i)">查看联系方式</button>
+          <button :disabled="busy" :aria-expanded="!!contacts[i.id]" @click="toggleContacts(i)">{{ contacts[i.id] ? '收起联系方式' : '查看联系方式' }}</button>
         </div>
         <div v-if="!accepted.length" class="empty">双方同意后会显示在这里。</div>
       </div>
@@ -719,9 +727,9 @@ onBeforeUnmount(() => {
 
     <!-- 站内信 -->
     <div v-if="page === 'messages'" class="panel">
-      <h2>我的站内信</h2>
+      <h2>{{ user.admin ? '已发送的站内信' : '我的站内信' }}</h2>
       <div v-for="m in messages" :key="m.id" class="admin-row">
-        <div><strong>{{ m.sender_name }} · 关于「{{ m.need_title }}」</strong><small>{{ formatTime(m.created_at) }}</small><p>{{ m.body }}</p></div>
+        <div><strong>{{ user.admin ? `发给 ${m.receiver_name}` : m.sender_name }} · 关于「{{ m.need_title }}」</strong><small>{{ formatTime(m.created_at) }}</small><p>{{ m.body }}</p></div>
       </div>
       <div v-if="!messages.length" class="empty">暂无站内信。</div>
     </div>
@@ -775,6 +783,14 @@ onBeforeUnmount(() => {
         </div>
         <div v-if="!adminData.invitations.length" class="empty">暂无匹配成功记录。</div>
       </section>
+      <form class="panel admin-password" @submit.prevent="changePassword">
+        <h2>修改管理员密码</h2>
+        <div class="form-grid">
+          <label>当前密码<input v-model="passwords.current_password" type="password" autocomplete="current-password" required></label>
+          <label>新密码（8–20 位）<span class="pwd-field"><input v-model="passwords.new_password" :type="visible.adminPwd ? 'text' : 'password'" minlength="8" maxlength="20" autocomplete="new-password" required><button type="button" class="eye" :aria-label="visible.adminPwd ? '隐藏密码' : '显示密码'" :aria-pressed="!!visible.adminPwd" @click="visible.adminPwd = !visible.adminPwd"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></span></label>
+        </div>
+        <button type="submit" :disabled="busy">修改密码</button>
+      </form>
     </div>
   </main>
 

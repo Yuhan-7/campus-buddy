@@ -1,0 +1,65 @@
+CREATE TABLE IF NOT EXISTS users (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, username VARCHAR(254) NOT NULL UNIQUE, password_hash VARCHAR(100) NOT NULL,
+ name VARCHAR(60) NOT NULL, age VARCHAR(3) NOT NULL DEFAULT '', gender VARCHAR(12) NOT NULL DEFAULT '', grade VARCHAR(12) NOT NULL DEFAULT '', hometown VARCHAR(80) NOT NULL DEFAULT '',
+ bio VARCHAR(600) NOT NULL DEFAULT '', personality TEXT NOT NULL, interests TEXT NOT NULL, skills TEXT NOT NULL, wants TEXT NOT NULL,
+ contact_email VARCHAR(254) NOT NULL DEFAULT '', phone VARCHAR(30) NOT NULL DEFAULT '', wechat VARCHAR(60) NOT NULL DEFAULT '', qq VARCHAR(20) NOT NULL DEFAULT '',
+ created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+);
+CREATE TABLE IF NOT EXISTS account_ids (
+ user_id BIGINT PRIMARY KEY, account_id VARCHAR(20) NOT NULL UNIQUE,
+ CONSTRAINT fk_account_id_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS unique_nicknames (
+ user_id BIGINT PRIMARY KEY, nickname VARCHAR(60) NOT NULL UNIQUE,
+ CONSTRAINT fk_nickname_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS admins (
+ user_id BIGINT PRIMARY KEY,
+ CONSTRAINT fk_admin_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS admin_bootstrap_passwords (
+ user_id BIGINT PRIMARY KEY, initialized_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ CONSTRAINT fk_admin_bootstrap_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS disabled_users (
+ user_id BIGINT PRIMARY KEY, created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ CONSTRAINT fk_disabled_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS sessions (
+ token_hash CHAR(64) PRIMARY KEY, user_id BIGINT NOT NULL, expires_at DATETIME(3) NOT NULL,
+ CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS security_questions (
+ user_id BIGINT NOT NULL, question_no INT NOT NULL, question VARCHAR(200) NOT NULL, answer_hash VARCHAR(100) NOT NULL,
+ PRIMARY KEY (user_id, question_no), CONSTRAINT fk_security_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS security_attempts (
+ user_id BIGINT PRIMARY KEY, failures INT NOT NULL DEFAULT 0, locked_until DATETIME(3) NULL,
+ CONSTRAINT fk_attempt_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS needs (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, user_id BIGINT NOT NULL, category VARCHAR(30) NOT NULL, title VARCHAR(120) NOT NULL,
+ description VARCHAR(1000) NOT NULL DEFAULT '', tags TEXT NOT NULL, slots TEXT NOT NULL, status VARCHAR(12) NOT NULL DEFAULT 'open',
+ created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ INDEX idx_needs_status(status,created_at), CONSTRAINT fk_need_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE TABLE IF NOT EXISTS need_views (
+ need_id BIGINT NOT NULL, user_id BIGINT NOT NULL, view_date DATE NOT NULL,
+ PRIMARY KEY (need_id,user_id,view_date), INDEX idx_view_date(view_date),
+ CONSTRAINT fk_view_need FOREIGN KEY (need_id) REFERENCES needs(id) ON DELETE CASCADE,
+ CONSTRAINT fk_view_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS admin_messages (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, sender_id BIGINT NOT NULL, receiver_id BIGINT NOT NULL, need_id BIGINT NOT NULL,
+ body VARCHAR(1000) NOT NULL, created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ INDEX idx_message_receiver(receiver_id,created_at),
+ CONSTRAINT fk_message_sender FOREIGN KEY (sender_id) REFERENCES users(id),
+ CONSTRAINT fk_message_receiver FOREIGN KEY (receiver_id) REFERENCES users(id),
+ CONSTRAINT fk_message_need FOREIGN KEY (need_id) REFERENCES needs(id)
+);
+CREATE TABLE IF NOT EXISTS invitations (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT, need_id BIGINT NOT NULL, sender_id BIGINT NOT NULL, receiver_id BIGINT NOT NULL,
+ status VARCHAR(12) NOT NULL DEFAULT 'pending', created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ INDEX idx_receiver(receiver_id,status), CONSTRAINT fk_inv_need FOREIGN KEY (need_id) REFERENCES needs(id),
+ CONSTRAINT fk_inv_sender FOREIGN KEY (sender_id) REFERENCES users(id), CONSTRAINT fk_inv_receiver FOREIGN KEY (receiver_id) REFERENCES users(id)
+);

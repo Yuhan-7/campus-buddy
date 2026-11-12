@@ -30,7 +30,9 @@ public class PrivacyController {
       Map.of("data", "联系方式（邮箱、电话、微信、QQ）", "purpose", "邀请被对方同意后交换联系方式；发出邀请前需至少填写一项", "visible", "仅本人与已同意邀请的对方，管理员也不可见"),
       Map.of("data", "发布的需求与期望时间段", "purpose", "在需求广场展示并用于匹配共同空闲时间", "visible", "所有访客（含未登录）"),
       Map.of("data", "帖子浏览记录（账号 + 日期）", "purpose", "统计浏览量与近 7 天热门主题，不用于其他用途", "visible", "仅以汇总数字展示"),
-      Map.of("data", "密保问题与答案", "purpose", "忘记密码时验证身份；答案仅保存哈希值", "visible", "问题对输入账号者可见，答案任何人不可见"));
+      Map.of("data", "密保问题与答案", "purpose", "忘记密码时验证身份；答案仅保存哈希值", "visible", "问题对输入账号者可见，答案任何人不可见"),
+      Map.of("data", "“智能填写”中输入的一句话", "purpose", "仅在你主动点击时用于生成需求表单草稿；平台配置了大模型时会发送给第三方大模型服务，否则只在本系统内处理", "visible", "不保存、不公开"),
+      Map.of("data", "发布的需求标题与说明", "purpose", "发布时做违规初筛（敏感词，或已配置的大模型），结果仅作为管理员审核参考", "visible", "初筛结果仅管理员可见"));
 
   private final Db db;
   private final SessionService sessions;

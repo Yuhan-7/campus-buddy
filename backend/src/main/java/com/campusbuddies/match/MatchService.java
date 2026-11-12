@@ -26,9 +26,10 @@ public final class MatchService {
   /** 打分结果；score 为 null 表示不推荐（无共同空闲时间）。 */
   public record Result(Integer score, List<String> reasons) {}
 
+  /** 标签先做同义词归一（见 TagNormalizer），再统一小写比较。 */
   public static Set<String> lower(List<?> values) {
     Set<String> result = new LinkedHashSet<>();
-    for (Object v : values) if (v instanceof String s && !s.isBlank()) result.add(s.trim().toLowerCase(Locale.ROOT));
+    for (Object v : values) if (v instanceof String s && !s.isBlank()) result.add(TagNormalizer.normalize(s).toLowerCase(Locale.ROOT));
     return result;
   }
 

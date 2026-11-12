@@ -199,6 +199,22 @@ class QualityRequirementTest {
   }
 
   @Test
+  @DisplayName("QR-A4 智能填写需要登录；发布含敏感词的帖子时管理端能看到疑似违规提示")
+  void aiDraftAndModerationNote() throws Exception {
+    mvc.perform(post("/api/ai/need-draft").contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"周六打羽毛球\"}")).andExpect(status().isUnauthorized());
+    register("aiuser@test.example");
+    Cookie who = login("aiuser@test.example");
+    mvc.perform(post("/api/ai/need-draft").cookie(who).contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"周六下午想打羽毛球\"}"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.draft.category").value("运动")).andExpect(jsonPath("$.draft.day").value("周六"));
+    createNeed(who, "技能互助", "有偿代写实验报告");
+    MvcResult adminLogin = mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON)
+        .content("{\"account\":\"admin@quality.example\",\"password\":\"adminpassword123\"}")).andExpect(status().isOk()).andReturn();
+    Cookie admin = new Cookie("buddy_session", adminLogin.getResponse().getHeader("Set-Cookie").split("=")[1].split(";")[0]);
+    String overview = mvc.perform(get("/api/admin/overview").cookie(admin)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+    assertTrue(overview.contains("含敏感词：有偿、代写"), "管理端应看到疑似违规提示");
+  }
+
+  @Test
   @DisplayName("QR-F3 未填写联系方式不能发出邀请，并提示去个人资料填写")
   void inviteRequiresContact() throws Exception {
     register("nocontact@test.example");

@@ -47,3 +47,6 @@ label.checkbox{display:flex;align-items:center;gap:8px;margin:0}label.checkbox i
 .reject-form{margin-top:10px;padding:12px;border:1px solid #eac8c8;border-radius:10px;background:#fffafa}
 .preset-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.preset-list button{font-size:13px;padding:5px 10px}
 .list-row small{display:block}
+.ai-assist{background:#f1f7fb;border:1px dashed #9cc3d9;border-radius:12px;padding:14px 16px;margin-bottom:16px}
+.ai-assist .actions{align-items:center;flex-wrap:wrap}
+.badge.warn{background:#fff1e0;color:#8a4b00;margin-top:6px;display:inline-block}

@@ -1,5 +1,7 @@
 package com.campusbuddies.admin;
 
+import com.campusbuddies.ai.AiClient;
+import com.campusbuddies.ai.RuleBasedAiClient;
 import com.campusbuddies.auth.AccountService;
 import com.campusbuddies.auth.SessionService;
 import com.campusbuddies.common.ApiException;
@@ -24,6 +26,7 @@ public class AdminController {
   private final SessionService sessions;
   private final AccountService accounts;
   private final UserViews views;
+  private final AiClient localCheck = new RuleBasedAiClient();
 
   public AdminController(Db db, SessionService sessions, AccountService accounts, UserViews views) {
     this.db = db;
@@ -46,8 +49,17 @@ public class AdminController {
       x.put("created_at", String.valueOf(u.get("created_at")));
       users.add(x);
     }
-    List<Map<String, Object>> needs = db.rows("SELECT n.id,n.user_id,u.name owner_name,n.category,n.title,n.description,n.status,n.created_at FROM needs n"
+    List<Map<String, Object>> needs = db.rows("SELECT n.id,n.user_id,u.name owner_name,n.category,n.title,n.description,n.status,n.created_at,n.review_note FROM needs n"
         + " JOIN users u ON u.id=n.user_id WHERE n.status<>'deleted' ORDER BY n.id DESC LIMIT 500");
+    // 发布时的初筛结果优先；早期数据没有记录时用本地敏感词补查（不调用大模型，避免打开页面就产生大量请求）
+    for (Map<String, Object> n : needs) {
+      String note = n.get("review_note") == null ? "" : String.valueOf(n.get("review_note"));
+      if (note.isEmpty()) {
+        AiClient.Moderation m = localCheck.moderate(String.valueOf(n.get("title")), String.valueOf(n.get("description")));
+        note = m.flagged() ? m.reason() : "";
+      }
+      n.put("review_note", note);
+    }
     List<Map<String, Object>> invitations = db.rows("SELECT i.id,i.need_id,n.title need_title,i.sender_id,s.name sender_name,i.receiver_id,r.name receiver_name,i.status,i.created_at"
         + " FROM invitations i JOIN needs n ON n.id=i.need_id JOIN users s ON s.id=i.sender_id JOIN users r ON r.id=i.receiver_id WHERE i.status='accepted' ORDER BY i.id DESC LIMIT 500");
     return Map.of("users", users, "needs", needs, "invitations", invitations);

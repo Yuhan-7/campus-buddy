@@ -1,5 +1,7 @@
 package com.campusbuddies.need;
 
+import com.campusbuddies.ai.AiClient;
+import com.campusbuddies.ai.AiService;
 import com.campusbuddies.auth.AccountService;
 import com.campusbuddies.auth.SessionService;
 import com.campusbuddies.common.ApiException;
@@ -37,11 +39,13 @@ public class NeedController {
   private final Db db;
   private final Json json;
   private final SessionService sessions;
+  private final AiService ai;
 
-  public NeedController(Db db, Json json, SessionService sessions) {
+  public NeedController(Db db, Json json, SessionService sessions, AiService ai) {
     this.db = db;
     this.json = json;
     this.sessions = sessions;
+    this.ai = ai;
   }
 
   private Map<String, Object> view(Map<String, Object> need) {
@@ -146,8 +150,11 @@ public class NeedController {
     if (!CATEGORIES.contains(category)) throw ApiException.bad("类型不正确");
     List<Map<String, String>> periods = Inputs.slots(d.get("slots"));
     if (periods.isEmpty()) throw ApiException.bad("请选一个期望时间段");
-    long id = db.insert("INSERT INTO needs(user_id,category,title,description,tags,slots) VALUES(?,?,?,?,?,?)",
-        Db.id(user), category, title, description, json.encode(Inputs.labels(d.get("tags"), 12)), json.encode(periods));
+    // 违规初筛只记录提示供管理员参考，不阻止发布、不自动删除
+    AiClient.Moderation check = ai.moderate(title, description);
+    long id = db.insert("INSERT INTO needs(user_id,category,title,description,tags,slots,review_note) VALUES(?,?,?,?,?,?,?)",
+        Db.id(user), category, title, description, json.encode(Inputs.labels(d.get("tags"), 12)), json.encode(periods),
+        check.flagged() ? check.reason() : "");
     return ResponseEntity.status(201).body(Map.of("id", id));
   }
 

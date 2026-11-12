@@ -229,6 +229,29 @@ function openDetail(n) {
 // ---------- 发布与匹配 ----------
 const emptyNeed = () => ({ category: '学习', title: '', description: '', tags: '', day: '周六', start: '14:00', duration: '120', end: '16:00' })
 const newNeed = ref(emptyNeed())
+const aiText = ref('')
+const aiSource = ref('')
+
+// 发布需求助手：把一句话拆成表单草稿，只填表、不发布，由用户检查后自己点“发布需求”
+function aiFill() {
+  return run(async () => {
+    const d = (await api('/ai/need-draft', 'POST', { text: aiText.value.trim() })).draft
+    const n = newNeed.value
+    newNeed.value = {
+      ...n,
+      category: d.category || n.category,
+      title: d.title || n.title,
+      description: d.description || n.description,
+      tags: d.tags.length ? d.tags.join('，') : n.tags,
+      day: d.day || n.day,
+      start: d.start || n.start,
+      duration: d.end ? 'custom' : n.duration,
+      end: d.end || n.end
+    }
+    aiSource.value = d.source === 'llm' ? '本次由大模型生成' : '本次由本地规则生成（未配置大模型）'
+    notify('已填好草稿，请检查下方表单后再发布')
+  })
+}
 const myNeeds = ref([])
 const matches = ref([])
 const selectedNeed = ref('')
@@ -569,6 +592,15 @@ onBeforeUnmount(() => {
     <div v-if="page === 'recommend'">
       <div class="panel">
         <h2>发布新需求</h2>
+        <div class="ai-assist">
+          <label>智能填写（选填）：用一句话描述你想找什么搭子
+            <textarea v-model="aiText" rows="2" maxlength="200" placeholder="例如：这周六下午三点到五点想找人打羽毛球，水平一般"></textarea>
+          </label>
+          <div class="actions">
+            <button type="button" :disabled="busy || aiText.trim().length < 2" @click="aiFill">智能填写</button>
+            <small class="hint">自动填好下方表单，不会直接发布，请检查后再提交。{{ aiSource }}</small>
+          </div>
+        </div>
         <form class="need-form" @submit.prevent="publish">
           <div class="form-grid">
             <label>类型<select v-model="newNeed.category"><option v-for="c in CATEGORIES" :key="c">{{ c }}</option></select></label>
@@ -794,6 +826,7 @@ onBeforeUnmount(() => {
           <div>
             <strong>{{ n.title }}</strong>
             <small>{{ n.owner_name }} · {{ n.category }} · {{ needStatus(n.status) }} · {{ formatTime(n.created_at) }}</small>
+            <span v-if="n.review_note" class="badge warn">疑似违规：{{ n.review_note }}（仅供参考）</span>
             <p>{{ n.description }}</p>
           </div>
           <div class="admin-moderation">

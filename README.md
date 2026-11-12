@@ -2,23 +2,28 @@
 
 这个目录是独立于原 Python 版的新版本。页面由 Vue 3 + Vite 构建，API 使用 Spring Boot，所有账号和需求集中保存在 MySQL，Docker Compose 启动三项服务。Redis 暂未加入：当前规则式推荐和数据量不需要缓存，避免增加单人项目的部署负担。
 
-## 不用 Docker，直接在电脑上运行
+## 运行方式（Docker Compose）
 
-需要 Java 21、Maven 和 Node.js 22。在本目录运行 `sh 构建免Docker版本.sh`，它会构建前端、打包后端并生成 `campus-buddy-local.jar`；然后运行 `java -jar campus-buddy-local.jar --spring.profiles.active=local`，访问 `http://localhost:8088/`。这个模式使用本地 H2 数据库，数据保存在 `data/`，与 Docker/MySQL 的数据库互不共享。
-
-> v1.2 起不再把前端构建产物提交到仓库（旧产物与新接口不兼容），需要按上面的步骤重新构建。
-
-## Docker 本机运行
+本项目的源码复现包统一按 Docker Compose 运行，不再提供免 Docker 版本。
 
 1. 安装并启动 Docker Desktop。
-2. 将 `.env.example` 复制为 `.env`，替换其中两个密码。
+2. 将 `.env.example` 复制为 `.env`，替换其中三个密码。
 3. 在本目录运行 `docker compose up --build -d`。
 4. 浏览器访问 `http://localhost:8088`（或 `.env` 中指定的端口）。
 5. 查看状态：`docker compose ps`；查看日志：`docker compose logs -f`；停止：`docker compose down`。
 
 也可以在本目录运行 `sh 更新并检查网站.command`，它会重建容器并等待 `/api/health` 返回正常。网页能打开但无法登录时，先查看该健康地址；如果显示 502，说明前端已启动但后端没有运行。
 
-首次启动会建立空数据库，没有公开演示账号。每位用户自行注册。数据库放在 Docker 卷 `mysql_data` 中，普通 `docker compose down` 不会删除数据；`docker compose down -v` 会删除数据，请勿用于日常停止。
+`.env` 中 `DEMO_DATA=true`（默认）时，首次启动会写入演示数据，见下文“演示数据”；改为 `false` 则建立空数据库，由用户自行注册。数据库放在 Docker 卷 `mysql_data` 中，普通 `docker compose down` 不会删除数据；`docker compose down -v` 会删除数据，请勿用于日常停止。
+
+## 两条找搭子路径
+
+| 路径 | 适用场景 | 实现方式 |
+|---|---|---|
+| 需求广场主动找人 | 用户知道自己要找什么，如“羽毛球搭子” | 按关键词、类型、热门主题直接查找，**不计算相似度**，按发布时间排序 |
+| 系统匹配推荐 | 用户希望系统帮忙发现合适的人 | 对自己的一条需求，按共同空闲时间、兴趣、需求标签、技能互补打分排序，并展示推荐理由 |
+
+两条路径最终都通过“邀请 → 对方同意”达成匹配，之后双方才能查看联系方式。相似度、同义词归一只用于第二条路径。
 
 ## 功能
 

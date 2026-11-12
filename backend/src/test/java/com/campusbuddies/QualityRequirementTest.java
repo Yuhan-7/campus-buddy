@@ -210,8 +210,8 @@ class QualityRequirementTest {
     MvcResult adminLogin = mvc.perform(post("/api/login").contentType(MediaType.APPLICATION_JSON)
         .content("{\"account\":\"admin@quality.example\",\"password\":\"adminpassword123\"}")).andExpect(status().isOk()).andReturn();
     Cookie admin = new Cookie("buddy_session", adminLogin.getResponse().getHeader("Set-Cookie").split("=")[1].split(";")[0]);
-    String overview = mvc.perform(get("/api/admin/overview").cookie(admin)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-    assertTrue(overview.contains("含敏感词：有偿、代写"), "管理端应看到疑似违规提示");
+    String overview = mvc.perform(get("/api/admin/overview").cookie(admin)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+    assertTrue(overview.contains("含敏感词：代写、有偿"), "管理端应看到疑似违规提示（按敏感词表顺序列出）");
   }
 
   @Test

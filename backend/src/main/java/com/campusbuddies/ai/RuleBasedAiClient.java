@@ -54,7 +54,29 @@ public class RuleBasedAiClient implements AiClient {
   }
 
   /** 解析时间段：优先识别“3点到5点”“14:00-16:00”，否则按上午/下午/晚上给出常用时段。返回 [开始, 结束]，对齐到半小时。 */
-  static String[] time(String t) {
+  private static final Pattern CN_NUMBER = Pattern.compile("([零一二两三四五六七八九十]{1,3})(?=\\s*(?:点|时|到|至|-|~|—|:|：))");
+
+  /** 把时间里的中文数字换成阿拉伯数字：“一到三点”→“1到3点”，“十二点半”→“12点半”。“周六”“一般”不受影响。 */
+  static String arabicHours(String t) {
+    Matcher m = CN_NUMBER.matcher(t);
+    StringBuilder out = new StringBuilder();
+    while (m.find()) m.appendReplacement(out, String.valueOf(cnToInt(m.group(1))));
+    m.appendTail(out);
+    return out.toString();
+  }
+
+  static int cnToInt(String s) {
+    String digits = "零一二三四五六七八九";
+    s = s.replace('两', '二');
+    int ten = s.indexOf('十');
+    if (ten < 0) return digits.indexOf(s.charAt(0));
+    int high = ten == 0 ? 1 : digits.indexOf(s.charAt(0));
+    int low = ten == s.length() - 1 ? 0 : digits.indexOf(s.charAt(ten + 1));
+    return high * 10 + low;
+  }
+
+  static String[] time(String raw) {
+    String t = arabicHours(raw);
     boolean pm = t.contains("下午") || t.contains("晚上") || t.contains("傍晚") || t.contains("夜");
     Matcher m = RANGE.matcher(t);
     if (m.find()) {

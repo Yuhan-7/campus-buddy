@@ -39,8 +39,17 @@ class AiAssistTest {
     assertEquals("运动", d.category());
     assertTrue(d.tags().contains("羽毛球"));
     assertEquals("周六", d.day());
-    assertEquals("14:00", d.start()); // “三点”是汉字，识别不到具体时间时按“下午”给出常用时段
+    assertEquals("15:00", d.start()); // 中文数字“三点到五点”+“下午” → 15:00–17:00
+    assertEquals("17:00", d.end());
     assertEquals("rules", d.source());
+    AiClient.NeedDraft cn = rules.draftNeed("这周六下午一到三点想找人打羽毛球，技术一般");
+    assertEquals("13:00", cn.start());
+    assertEquals("15:00", cn.end());
+    AiClient.NeedDraft half = rules.draftNeed("周日晚上七点半到九点跑步");
+    assertEquals("19:30", half.start());
+    assertEquals("21:00", half.end());
+    AiClient.NeedDraft vague = rules.draftNeed("周六下午想打羽毛球");
+    assertEquals("14:00", vague.start()); // 没说具体几点时，按“下午”给出常用时段 14:00–16:00
     AiClient.NeedDraft exact = rules.draftNeed("周三晚上7点到9点图书馆自习");
     assertEquals("学习", exact.category());
     assertEquals("19:00", exact.start());

@@ -54,7 +54,8 @@ backend/src/main/java/com/campusbuddies/
   need/        需求发布、广场、热门主题
   match/       匹配打分（MatchService 为纯函数）与推荐接口
   invitation/  邀请与联系方式交换
-  admin/       管理端、站内信、启动初始化
+  admin/       管理端、站内信、启动初始化、演示数据
+  ai/          智能填写与违规初筛（AiClient 接口，本地规则 / 大模型两种实现）
 frontend/src/
   App.vue      页面
   api.js       请求封装（超时、离线、错误提示）

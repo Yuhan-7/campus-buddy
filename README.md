@@ -58,7 +58,7 @@ frontend/src/
 
 ## 测试
 
-`cd backend && mvn test`。共 22 个用例，其中 17 个对应质量需求，编号与说明见 `docs/质量需求与测试对照.md`。
+`cd backend && mvn test`。共 23 个用例，其中 18 个对应质量需求，编号与说明见 `docs/质量需求与测试对照.md`。
 
 ## 演示数据（验收演示用）
 

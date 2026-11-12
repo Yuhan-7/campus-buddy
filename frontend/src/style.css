@@ -44,3 +44,6 @@ label.checkbox{display:flex;align-items:center;gap:8px;margin:0}label.checkbox i
 .pwd-field .eye svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .field-error{display:block;color:#a33a3a;margin-top:4px}
 .pwd-field{margin-top:6px}.pwd-field input{margin-top:0}
+.reject-form{margin-top:10px;padding:12px;border:1px solid #eac8c8;border-radius:10px;background:#fffafa}
+.preset-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.preset-list button{font-size:13px;padding:5px 10px}
+.list-row small{display:block}

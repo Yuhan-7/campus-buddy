@@ -179,6 +179,26 @@ class QualityRequirementTest {
   }
 
   @Test
+  @DisplayName("QR-F4 拒绝邀请可附原因（最多 100 字），发送方能看到原因")
+  void rejectWithReason() throws Exception {
+    register("asker@test.example");
+    register("owner2@test.example");
+    Cookie asker = login("asker@test.example"), owner = login("owner2@test.example");
+    setContact(asker, "申请人乙", "asker@test.example");
+    setContact(owner, "发布者乙", "owner2@test.example");
+    long needId = createNeed(owner, "运动", "需要拒绝原因的需求");
+    long invitationId = data(mvc.perform(post("/api/invitations").cookie(asker).contentType(MediaType.APPLICATION_JSON)
+        .content("{\"need_id\":" + needId + ",\"receiver_id\":" + myId(owner) + "}")).andExpect(status().isCreated()).andReturn()).get("id").asLong();
+    mvc.perform(patch("/api/invitations/" + invitationId).cookie(owner).contentType(MediaType.APPLICATION_JSON)
+        .content("{\"action\":\"rejected\",\"reason\":\"" + "长".repeat(101) + "\"}")).andExpect(status().isBadRequest());
+    mvc.perform(patch("/api/invitations/" + invitationId).cookie(owner).contentType(MediaType.APPLICATION_JSON)
+        .content("{\"action\":\"rejected\",\"reason\":\"时间对不上\"}")).andExpect(status().isOk());
+    mvc.perform(get("/api/invitations").cookie(asker)).andExpect(status().isOk())
+        .andExpect(jsonPath("$.invitations[0].status").value("rejected"))
+        .andExpect(jsonPath("$.invitations[0].reason").value("时间对不上"));
+  }
+
+  @Test
   @DisplayName("QR-F3 未填写联系方式不能发出邀请，并提示去个人资料填写")
   void inviteRequiresContact() throws Exception {
     register("nocontact@test.example");

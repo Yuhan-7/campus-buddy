@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 import static com.campusbuddies.common.Inputs.number;
+import static com.campusbuddies.common.Inputs.require;
 import static com.campusbuddies.common.Inputs.str;
 
 /**
@@ -59,7 +60,7 @@ public class InvitationController {
         + " JOIN users s ON s.id=i.sender_id JOIN users r ON r.id=i.receiver_id WHERE (i.sender_id=? OR i.receiver_id=?) AND (n.status<>'deleted' OR i.status='accepted')"
         + " ORDER BY i.created_at DESC", myId, myId)) {
       Map<String, Object> x = new LinkedHashMap<>();
-      for (String k : List.of("id", "need_id", "need_title", "sender_id", "sender_name", "receiver_id", "receiver_name", "status")) x.put(k, i.get(k));
+      for (String k : List.of("id", "need_id", "need_title", "sender_id", "sender_name", "receiver_id", "receiver_name", "status", "reason")) x.put(k, i.get(k));
       x.put("created_at", String.valueOf(i.get("created_at")));
       out.add(x);
     }
@@ -77,8 +78,10 @@ public class InvitationController {
     boolean receiverAction = Set.of("accepted", "rejected").contains(action) && receiver == myId;
     boolean senderAction = "withdrawn".equals(action) && sender == myId;
     if (!receiverAction && !senderAction) throw ApiException.forbidden();
+    // 拒绝时可选填原因（最多 100 字），发送方能看到；其他操作不记录原因
+    String reason = "rejected".equals(action) ? require(str(d, "reason"), 0, 100, "拒绝原因最多 100 字") : "";
     // 带 status='pending' 条件更新，防止双方同时操作造成重复处理
-    int updated = db.update("UPDATE invitations SET status=?,updated_at=CURRENT_TIMESTAMP(3) WHERE id=? AND status='pending'", action, invId);
+    int updated = db.update("UPDATE invitations SET status=?,reason=?,updated_at=CURRENT_TIMESTAMP(3) WHERE id=? AND status='pending'", action, reason, invId);
     if (updated == 0) throw ApiException.conflict("邀请已处理");
     return Map.of("ok", true);
   }

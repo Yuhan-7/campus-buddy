@@ -220,10 +220,13 @@ public class DemoDataSeeder implements ApplicationRunner {
         owner, n.category(), n.title(), n.description(), json.encode(n.tags()), json.encode(List.of(slot)), status, Timestamp.valueOf(createdAt));
   }
 
+  private static final List<String> REJECT_REASONS = List.of("时间对不上，下次再约", "已经找到搭子了，谢谢", "这周比较忙，暂时不参加", "");
+
   private void invite(long needId, long sender, long receiver, String status, LocalDateTime at) {
     if (sender == receiver) return;
-    db.update("INSERT INTO invitations(need_id,sender_id,receiver_id,status,created_at,updated_at) VALUES(?,?,?,?,?,?)",
-        needId, sender, receiver, status, Timestamp.valueOf(at), Timestamp.valueOf(at));
+    String reason = "rejected".equals(status) ? REJECT_REASONS.get(random.nextInt(REJECT_REASONS.size())) : "";
+    db.update("INSERT INTO invitations(need_id,sender_id,receiver_id,status,reason,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
+        needId, sender, receiver, status, reason, Timestamp.valueOf(at), Timestamp.valueOf(at));
   }
 
   private void message(long sender, long receiver, long needId, String body) {

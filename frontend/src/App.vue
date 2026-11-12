@@ -304,11 +304,21 @@ function sendInvite(needId, receiverId) {
   })
 }
 
+// 拒绝：先展开填写原因的小表单（同时起到二次确认作用），再提交
+const rejecting = ref(null)
+const rejectReason = ref('')
+const REJECT_PRESETS = ['时间对不上，下次再约', '已经找到搭子了，谢谢', '这周比较忙，暂时不参加']
+
+function startReject(i) {
+  rejecting.value = i.id
+  rejectReason.value = ''
+}
+
 function handleInvitation(i, type) {
-  if (type === 'rejected' && !window.confirm(`确定拒绝 ${i.sender_name} 的邀请吗？拒绝后无法撤销。`)) return
   if (type === 'withdrawn' && !window.confirm(`确定撤回发给 ${i.receiver_name} 的邀请吗？`)) return
   return run(async () => {
-    await api('/invitations/' + i.id, 'PATCH', { action: type })
+    await api('/invitations/' + i.id, 'PATCH', type === 'rejected' ? { action: type, reason: rejectReason.value.trim() } : { action: type })
+    rejecting.value = null
     await go('invitations')
     notify({ accepted: '已同意，现在可以查看彼此联系方式', rejected: '已拒绝该邀请', withdrawn: '邀请已撤回' }[type])
   })
@@ -622,12 +632,27 @@ onBeforeUnmount(() => {
       <div class="panel">
         <h2>收到的邀请</h2>
         <div v-for="i in incoming" :key="i.id" class="list-row">
-          <div><strong>{{ i.need_title }}</strong><small>来自 {{ i.sender_name }} · {{ invitationStatus(i.status) }} · {{ formatTime(i.created_at) }}</small></div>
+          <div>
+            <strong>{{ i.need_title }}</strong><small>来自 {{ i.sender_name }} · {{ invitationStatus(i.status) }} · {{ formatTime(i.created_at) }}</small>
+            <small v-if="i.status === 'rejected' && i.reason">我的拒绝原因：{{ i.reason }}</small>
+            <form v-if="rejecting === i.id" class="reject-form" @submit.prevent="handleInvitation(i, 'rejected')">
+              <label>拒绝原因（选填，最多 100 字，对方可以看到）
+                <textarea v-model="rejectReason" rows="2" maxlength="100"></textarea>
+              </label>
+              <div class="preset-list">
+                <button v-for="p in REJECT_PRESETS" :key="p" type="button" @click="rejectReason = p">{{ p }}</button>
+              </div>
+              <div class="actions">
+                <button type="submit" class="danger" :disabled="busy">确认拒绝</button>
+                <button type="button" @click="rejecting = null">取消</button>
+              </div>
+            </form>
+          </div>
           <div class="actions">
             <button @click="showPerson(i.sender_id)">查看资料</button>
-            <template v-if="i.status === 'pending'">
+            <template v-if="i.status === 'pending' && rejecting !== i.id">
               <button class="primary" :disabled="busy" @click="handleInvitation(i, 'accepted')">同意</button>
-              <button :disabled="busy" @click="handleInvitation(i, 'rejected')">拒绝</button>
+              <button :disabled="busy" @click="startReject(i)">拒绝</button>
             </template>
           </div>
         </div>
@@ -636,7 +661,10 @@ onBeforeUnmount(() => {
       <div class="panel">
         <h2>发出的邀请</h2>
         <div v-for="i in outgoing" :key="i.id" class="list-row">
-          <div><strong>{{ i.need_title }}</strong><small>发给 {{ i.receiver_name }} · {{ invitationStatus(i.status) }} · {{ formatTime(i.created_at) }}</small></div>
+          <div>
+            <strong>{{ i.need_title }}</strong><small>发给 {{ i.receiver_name }} · {{ invitationStatus(i.status) }} · {{ formatTime(i.created_at) }}</small>
+            <small v-if="i.status === 'rejected'" class="reason">对方的拒绝原因：{{ i.reason || '对方未填写原因' }}</small>
+          </div>
           <div class="actions">
             <button @click="showPerson(i.receiver_id)">查看资料</button>
             <button v-if="i.status === 'pending'" :disabled="busy" @click="handleInvitation(i, 'withdrawn')">撤回</button>

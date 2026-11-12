@@ -44,6 +44,11 @@ public class StartupInitializer implements ApplicationRunner {
     } catch (DataAccessException e) {
       db.execute("ALTER TABLE users ADD COLUMN gender VARCHAR(12) NOT NULL DEFAULT ''");
     }
+    try {
+      db.row("SELECT reason FROM invitations LIMIT 1");
+    } catch (DataAccessException e) {
+      db.execute("ALTER TABLE invitations ADD COLUMN reason VARCHAR(200) NOT NULL DEFAULT ''");
+    }
     for (Map<String, Object> u : db.rows("SELECT id,name,created_at FROM users ORDER BY id")) {
       long userId = Db.id(u);
       if (accounts.accountId(userId).isEmpty()) {

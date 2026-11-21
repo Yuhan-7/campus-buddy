@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>无法连接 - 校园搭子匹配系统</title>
+<style>
+  body{font-family:"Microsoft YaHei",sans-serif;margin:0;display:grid;place-items:center;min-height:100vh;background:#f5f8fc;color:#21354c}
+  main{max-width:560px;padding:32px;background:#fff;border:1px solid #d6e2ee;border-radius:16px}
+  h1{font-size:26px;margin-top:0}
+  button{font:inherit;font-size:18px;padding:10px 22px;border-radius:10px;border:2px solid #1b5778;background:#1b5778;color:#fff;cursor:pointer}
+  button:focus-visible{outline:3px solid #69b7d4;outline-offset:3px}
+  code{background:#eef3f8;padding:2px 6px;border-radius:6px}
+  @media (forced-colors:active){main,button{border:2px solid CanvasText}button:focus-visible{outline:3px solid Highlight}}
+</style>
+</head>
+<body>
+<main role="alert" aria-labelledby="t">
+  <h1 id="t" tabindex="-1">暂时连接不上校园搭子服务</h1>
+  <p>程序需要先启动后端服务。请确认已在项目目录运行 <code>docker compose up -d</code>，然后按“重试”。</p>
+  <p>正在尝试连接的地址：<strong id="url"></strong></p>
+  <p>错误信息：<span id="reason"></span></p>
+  <button id="retry" type="button">重试</button>
+</main>
+<script>
+  const q = new URLSearchParams(location.search)
+  const url = q.get('url') || 'http://localhost:8088'
+  document.getElementById('url').textContent = url
+  document.getElementById('reason').textContent = q.get('reason') || '未知'
+  document.getElementById('retry').addEventListener('click', () => { location.href = url })
+  document.getElementById('retry').focus()
+</script>
+</body>
+</html>

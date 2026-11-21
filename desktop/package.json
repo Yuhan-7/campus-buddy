@@ -1,0 +1,23 @@
+{
+  "name": "campus-buddy-desktop",
+  "productName": "校园搭子",
+  "version": "1.5.0",
+  "description": "校园搭子匹配系统 Windows 桌面版（Electron 外壳，界面与网页版相同）",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "edu.campusbuddy.desktop",
+    "productName": "校园搭子",
+    "directories": { "output": "release" },
+    "files": ["main.js", "offline.html"],
+    "win": { "target": "portable" }
+  }
+}

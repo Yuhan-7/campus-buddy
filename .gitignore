@@ -5,3 +5,5 @@ frontend/dist/
 backend/target/
 backend/src/main/resources/static/
 campus-buddy-local.jar
+desktop/node_modules/
+desktop/release/

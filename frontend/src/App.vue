@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { api } from './api.js'
 import {
   CATEGORIES, DAYS, GENDERS, GRADES, DELETE_CONFIRM_WORD, TIME_OPTIONS,
@@ -24,10 +24,21 @@ const online = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
 const toast = ref(null) // { text, kind, undo }
 let toastTimer
 
+const liveStatus = ref('') // 普通提示，读屏软件空闲时播报
+const liveAlert = ref('')  // 错误提示，读屏软件立即播报
+
 function notify(text, kind = 'success', undo = null) {
   clearTimeout(toastTimer)
   toast.value = { text, kind, undo }
-  toastTimer = setTimeout(() => { toast.value = null }, undo ? 8000 : 5000)
+  toastTimer = setTimeout(() => { toast.value = null }, undo ? 10000 : 6000)
+  announce(undo ? `${text}。可以按 Alt+Z 撤销` : text, kind === 'error')
+}
+
+/** 先清空再写入，保证同一句话连续出现两次也会被重新读出。 */
+function announce(text, urgent = false) {
+  const target = urgent ? liveAlert : liveStatus
+  target.value = ''
+  nextTick(() => { target.value = text })
 }
 
 /** 包装用户操作：防止重复提交，统一提示错误。 */
@@ -92,6 +103,8 @@ function submitAuth() {
       page.value = 'plaza'
       await refresh()
       notify('登录成功')
+      await nextTick()
+      document.getElementById('page-title')?.focus()
     }
   })
 }
@@ -140,7 +153,7 @@ function clearSession() {
   matches.value = []
   contacts.value = {}
   mode.value = 'login'
-  go('auth')
+  navigate('auth')
 }
 
 async function logout() {
@@ -182,10 +195,21 @@ async function go(target) {
   }
 }
 
+const PAGE_NAMES = { ...PAGE_TITLES, auth: '登录与注册' }
+
+/** 由用户主动切换页面时调用：加载数据后把焦点移到页面标题。 */
+async function navigate(target) {
+  await go(target)
+  await nextTick()
+  document.getElementById('page-title')?.focus()
+}
+
+watch(page, value => { document.title = `${PAGE_NAMES[value] || ''} - 校园搭子匹配系统` }, { immediate: true })
+
 function needLogin(text = '登录后才能发送邀请') {
   notify(text, 'error')
   mode.value = 'login'
-  go('auth')
+  navigate('auth')
 }
 
 // ---------- 需求广场（免注册可浏览，公约第九条） ----------
@@ -335,6 +359,18 @@ const REJECT_PRESETS = ['时间对不上，下次再约', '已经找到搭子了
 function startReject(i) {
   rejecting.value = i.id
   rejectReason.value = ''
+  nextTick(() => document.getElementById('reject-reason-' + i.id)?.focus())
+}
+
+function cancelReject(i) {
+  rejecting.value = null
+  nextTick(() => document.getElementById('reject-btn-' + i.id)?.focus())
+}
+
+function choosePreset(i, text) {
+  rejectReason.value = text
+  announce('已填入：' + text)
+  document.getElementById('reject-reason-' + i.id)?.focus()
 }
 
 function handleInvitation(i, type) {
@@ -442,10 +478,38 @@ function adminSendMessage(n) {
   })
 }
 
+// ---------- 弹窗焦点管理（无障碍：焦点不丢失、不跑到弹窗背后） ----------
+let focusBeforeModal = null
+const anyModal = computed(() => !!(detail.value || person.value || showPrivacy.value))
+watch(anyModal, open => {
+  if (open) {
+    focusBeforeModal = document.activeElement
+    nextTick(() => document.querySelector('.modal .close')?.focus())
+  } else {
+    nextTick(() => {
+      if (focusBeforeModal && document.contains(focusBeforeModal)) focusBeforeModal.focus()
+      else document.getElementById('page-title')?.focus()
+      focusBeforeModal = null
+    })
+  }
+})
+
+function trapFocus(e) {
+  if (e.key !== 'Tab') return
+  const items = [...e.currentTarget.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter(el => !el.disabled)
+  if (!items.length) return
+  const first = items[0], last = items[items.length - 1]
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+}
+
 // ---------- 生命周期 ----------
 const updateOnline = () => { online.value = navigator.onLine }
 const closeOnEscape = e => {
   if (e.key === 'Escape') { detail.value = null; person.value = null; showPrivacy.value = false }
+  // Alt+Z：撤销刚才的“关闭需求”，键盘用户不必去找右下角的撤销按钮
+  if (e.altKey && (e.key === 'z' || e.key === 'Z') && toast.value?.undo) { e.preventDefault(); toast.value.undo() }
 }
 onMounted(() => {
   loadPrefs()
@@ -465,40 +529,40 @@ onBeforeUnmount(() => {
 <div class="shell" :class="{ 'large-text': prefs.large, 'high-contrast': prefs.contrast }">
   <a class="skip-link" href="#main">跳到主要内容</a>
 
-  <header>
+  <header :inert="anyModal || null">
     <div class="brand">
       <span class="brand-icon" aria-hidden="true">✦</span>
       <div><strong>校园搭子</strong><small>找到同频的人，一起出发</small></div>
     </div>
     <nav v-if="user || page !== 'auth'" aria-label="主导航">
-      <button v-for="x in navItems" :key="x[0]" :class="{ active: page === x[0] }" :aria-current="page === x[0] ? 'page' : null" @click="go(x[0])">{{ x[1] }}</button>
+      <button v-for="x in navItems" :key="x[0]" :class="{ active: page === x[0] }" :aria-current="page === x[0] ? 'page' : null" @click="navigate(x[0])">{{ x[1] }}</button>
     </nav>
     <div class="a11y-toggles" role="group" aria-label="显示设置">
-      <button type="button" :aria-pressed="prefs.large" @click="prefs.large = !prefs.large">大字</button>
-      <button type="button" :aria-pressed="prefs.contrast" @click="prefs.contrast = !prefs.contrast">高对比</button>
+      <button type="button" :aria-pressed="prefs.large" aria-label="大字模式" @click="prefs.large = !prefs.large">大字</button>
+      <button type="button" :aria-pressed="prefs.contrast" aria-label="高对比模式" @click="prefs.contrast = !prefs.contrast">高对比</button>
     </div>
-    <div v-if="user" class="header-user">{{ user.name }} <button @click="logout">退出</button></div>
-    <div v-else-if="page !== 'auth'" class="header-user"><button class="primary" @click="mode = 'login'; go('auth')">登录 / 注册</button></div>
+    <div v-if="user" class="header-user"><span>当前用户：{{ user.name }}</span> <button type="button" @click="logout">退出登录</button></div>
+    <div v-else-if="page !== 'auth'" class="header-user"><button type="button" class="primary" @click="mode = 'login'; navigate('auth')">登录 / 注册</button></div>
   </header>
 
   <div v-if="!online" class="offline-banner" role="alert">网络已断开，页面内容可能不是最新的。恢复网络后操作会自动可用。</div>
 
   <!-- 登录 / 注册 / 找回密码 -->
-  <main v-if="!user && page === 'auth'" id="main" class="auth-wrap">
+  <main v-if="!user && page === 'auth'" :inert="anyModal || null" id="main" class="auth-wrap" tabindex="-1">
     <section class="hero">
       <span class="eyebrow">CAMPUS CONNECTION</span>
-      <h1>下一次同行，<br>从这里开始。</h1>
+      <h1 id="page-title" tabindex="-1">下一次同行，<br>从这里开始。</h1>
       <p>找学习、运动、兴趣与技能互助搭子。只有双方同意后，才能查看彼此联系方式。</p>
-      <div class="hero-pills"><span>✎ 一起学习</span><span>◉ 一起运动</span><span>✦ 交换技能</span></div>
-      <button type="button" class="link hero-browse" @click="go('plaza')">不想注册？先随便看看需求广场 →</button>
+      <div class="hero-pills"><span><span aria-hidden="true">✎ </span>一起学习</span><span><span aria-hidden="true">◉ </span>一起运动</span><span><span aria-hidden="true">✦ </span>交换技能</span></div>
+      <button type="button" class="link hero-browse" @click="navigate('plaza')">不想注册？先随便看看需求广场 →</button>
     </section>
 
-    <form v-if="mode !== 'reset'" class="auth-card" @submit.prevent="submitAuth">
-      <h2>{{ mode === 'login' ? '欢迎回来' : '创建账号' }}</h2>
+    <form v-if="mode !== 'reset'" class="auth-card" aria-labelledby="auth-title" @submit.prevent="submitAuth">
+      <h2 id="auth-title">{{ mode === 'login' ? '欢迎回来' : '创建账号' }}</h2>
       <p>{{ mode === 'login' ? '使用邮箱或账号 ID 登录。' : '用邮箱注册，无需验证码，完全免费。' }}</p>
-      <div class="tabs" role="tablist">
-        <button type="button" role="tab" :aria-selected="mode === 'login'" :class="{ active: mode === 'login' }" @click="mode = 'login'">登录</button>
-        <button type="button" role="tab" :aria-selected="mode === 'register'" :class="{ active: mode === 'register' }" @click="mode = 'register'">注册</button>
+      <div class="tabs" role="group" aria-label="选择登录或注册">
+        <button type="button" :aria-pressed="mode === 'login'" :class="{ active: mode === 'login' }" @click="mode = 'login'">登录</button>
+        <button type="button" :aria-pressed="mode === 'register'" :class="{ active: mode === 'register' }" @click="mode = 'register'">注册</button>
       </div>
       <label>{{ mode === 'login' ? '邮箱或账号 ID' : '邮箱' }}
         <input v-model="credentials.account" :type="mode === 'register' ? 'email' : 'text'" :autocomplete="mode === 'register' ? 'email' : 'username'" required>
@@ -510,19 +574,19 @@ onBeforeUnmount(() => {
         </span>
       </label>
       <label v-if="mode === 'register'">再次输入密码
-        <input v-model="confirmPassword" type="password" autocomplete="new-password" maxlength="20" required>
-        <small v-if="confirmPassword && confirmPassword !== credentials.password" class="field-error" role="alert">两次输入的密码不一致</small>
+        <input v-model="confirmPassword" type="password" autocomplete="new-password" maxlength="20" required :aria-invalid="!!confirmPassword && confirmPassword !== credentials.password" aria-describedby="confirm-error">
+        <small id="confirm-error" class="field-error" aria-live="polite">{{ confirmPassword && confirmPassword !== credentials.password ? '两次输入的密码不一致' : '' }}</small>
       </label>
       <div v-if="mode === 'register'" class="consent">
         <label class="checkbox"><input v-model="agreePrivacy" type="checkbox"> 我已阅读并同意</label>
-        <button type="button" class="link" @click="openPrivacy">《个人信息使用说明》</button>
+        <button type="button" class="link" aria-label="查看《个人信息使用说明》" @click="openPrivacy">《个人信息使用说明》</button>
       </div>
       <button class="primary full" type="submit" :disabled="busy">{{ busy ? '请稍候…' : (mode === 'login' ? '登录' : '注册') }}</button>
       <button v-if="mode === 'login'" type="button" class="link" @click="mode = 'reset'">忘记密码？</button>
     </form>
 
-    <form v-else class="auth-card" @submit.prevent="resetPassword">
-      <h2>重置密码</h2>
+    <form v-else class="auth-card" aria-labelledby="reset-title" @submit.prevent="resetPassword">
+      <h2 id="reset-title">重置密码</h2>
       <p>先输入账号，回答预先设置的 3 个密保问题；答对其中 2 个即可重置。连续答错 5 次会锁定 15 分钟。</p>
       <label>邮箱或账号 ID<input v-model="resetForm.account" required></label>
       <button type="button" :disabled="busy || !resetForm.account.trim()" @click="loadResetQuestions">查看密保问题</button>
@@ -535,22 +599,22 @@ onBeforeUnmount(() => {
     </form>
   </main>
 
-  <main v-else id="main" class="main">
+  <main v-else :inert="anyModal || null" id="main" class="main" tabindex="-1" :aria-busy="busy">
     <div class="page-heading">
       <span class="eyebrow">CAMPUS BUDDY</span>
-      <h1>{{ PAGE_TITLES[page] }}</h1>
+      <h1 id="page-title" tabindex="-1">{{ PAGE_TITLES[page] }}</h1>
       <p>{{ PAGE_HINTS[page] }}</p>
     </div>
 
     <!-- 需求广场 -->
     <div v-if="page === 'plaza'">
       <div v-if="!user" class="guest-banner">
-        你正在以访客身份浏览。<button class="link" @click="mode = 'register'; go('auth')">免费注册</button>后可以发布需求、查看资料和发送邀请。
+        你正在以访客身份浏览。<button type="button" class="link" @click="mode = 'register'; navigate('auth')">免费注册</button>后可以发布需求、查看资料和发送邀请。
       </div>
       <section class="trending" aria-labelledby="trending-title">
         <h2 id="trending-title">热门搭子主题</h2>
         <div v-if="trending.length" class="trend-list">
-          <button v-for="t in trending" :key="t.topic" @click="categoryFilter = ''; query = t.topic">
+          <button v-for="t in trending" :key="t.topic" type="button" :aria-label="`搜索${t.topic}搭子，${t.posts} 条需求，${t.views_7d} 次浏览`" @click="categoryFilter = ''; query = t.topic">
             <strong>{{ t.topic }}搭子</strong><span>{{ t.posts }} 条需求 · {{ t.views_7d }} 次浏览</span>
           </button>
         </div>
@@ -563,29 +627,29 @@ onBeforeUnmount(() => {
           <option v-for="c in CATEGORIES" :key="c">{{ c }}</option>
         </select>
         <button v-if="query || categoryFilter" type="button" @click="query = ''; categoryFilter = ''">清除筛选</button>
-        <span aria-live="polite">已显示 {{ needs.length }} 条{{ hasMore ? '，还有更多' : '' }}</span>
+        <span role="status">已显示 {{ needs.length }} 条{{ hasMore ? '，还有更多' : '' }}</span>
       </div>
-      <div class="grid">
-        <article v-for="n in needs" :key="n.id" class="card">
+      <div class="grid" role="list" aria-label="需求列表">
+        <article v-for="n in needs" :key="n.id" class="card" role="listitem" :aria-labelledby="'need-' + n.id">
           <div class="card-top"><span class="badge">{{ n.category }}</span><small>{{ n.owner_name }} · {{ n.views || 0 }} 次浏览</small></div>
-          <h3>{{ n.title }}</h3>
+          <h3 :id="'need-' + n.id">{{ n.title }}</h3>
           <p>{{ n.description || '期待找到合适的搭子，一起开始。' }}</p>
           <div class="tags">
             <span v-for="t in n.tags" :key="t">{{ t }}</span>
-            <span v-for="s in n.slots" :key="s.day + s.start">{{ s.day }} {{ s.start }}–{{ s.end }}</span>
+            <span v-for="s in n.slots" :key="s.day + s.start">{{ s.day }} {{ s.start }} 到 {{ s.end }}</span>
           </div>
           <div class="actions">
-            <button @click="openDetail(n)">查看详情</button>
+            <button type="button" :aria-label="`查看详情：${n.title}`" @click="openDetail(n)">查看详情</button>
             <template v-if="user && n.user_id !== user.id">
-              <button @click="showPerson(n.user_id)">查看资料</button>
-              <button v-if="!user.admin" class="primary" :disabled="busy" @click="sendInvite(n.id, n.user_id)">发送邀请</button>
+              <button type="button" :aria-label="`查看资料：${n.owner_name}`" @click="showPerson(n.user_id)">查看资料</button>
+              <button v-if="!user.admin" type="button" class="primary" :disabled="busy" :aria-label="`发送邀请给 ${n.owner_name}，需求：${n.title}`" @click="sendInvite(n.id, n.user_id)">发送邀请</button>
             </template>
-            <button v-else-if="!user" class="primary" @click="needLogin()">登录后邀请</button>
+            <button v-else-if="!user" type="button" class="primary" :aria-label="`登录后邀请：${n.title}`" @click="needLogin()">登录后邀请</button>
           </div>
         </article>
       </div>
-      <div v-if="!needs.length" class="empty">暂无相关需求{{ user ? '，发布一条试试。' : '。' }}</div>
-      <div v-if="hasMore" class="load-more"><button :disabled="busy" @click="loadMore">{{ busy ? '加载中…' : '加载更多' }}</button></div>
+      <div v-if="!needs.length" class="empty" role="status">暂无相关需求{{ user ? '，发布一条试试。' : '。' }}</div>
+      <div v-if="hasMore" class="load-more"><button type="button" :disabled="busy" @click="loadMore">{{ busy ? '加载中…' : '加载更多' }}</button></div>
     </div>
 
     <!-- 发布与匹配 -->
@@ -597,8 +661,8 @@ onBeforeUnmount(() => {
             <textarea v-model="aiText" rows="2" maxlength="200" placeholder="例如：这周六下午三点到五点想找人打羽毛球，水平一般"></textarea>
           </label>
           <div class="actions">
-            <button type="button" :disabled="busy || aiText.trim().length < 2" @click="aiFill">智能填写</button>
-            <small class="hint">自动填好下方表单，不会直接发布，请检查后再提交。{{ aiSource }}</small>
+            <button type="button" :disabled="busy || aiText.trim().length < 2" aria-describedby="ai-hint" @click="aiFill">智能填写</button>
+            <small id="ai-hint" class="hint">自动填好下方表单，不会直接发布，请检查后再提交。{{ aiSource }}</small>
           </div>
         </div>
         <form class="need-form" @submit.prevent="publish">
@@ -625,8 +689,8 @@ onBeforeUnmount(() => {
         <div v-for="n in myNeeds" :key="n.id" class="list-row">
           <div><strong>{{ n.title }}</strong><small>{{ n.category }} · {{ needStatus(n.status) }} · {{ n.views || 0 }} 次浏览</small></div>
           <div class="actions">
-            <button v-if="n.status !== 'removed'" :disabled="busy" @click="toggleNeed(n)">{{ n.status === 'open' ? '关闭' : '重新开放' }}</button>
-            <button class="danger" :disabled="busy" @click="deleteNeed(n)">删除</button>
+            <button v-if="n.status !== 'removed'" type="button" :disabled="busy" :aria-label="`${n.status === 'open' ? '关闭' : '重新开放'}：${n.title}`" @click="toggleNeed(n)">{{ n.status === 'open' ? '关闭' : '重新开放' }}</button>
+            <button type="button" class="danger" :disabled="busy" :aria-label="`删除：${n.title}`" @click="deleteNeed(n)">删除</button>
           </div>
         </div>
         <div v-if="!myNeeds.length" class="empty">还没有发布需求。</div>
@@ -640,17 +704,17 @@ onBeforeUnmount(() => {
             <option v-for="n in openNeeds" :key="n.id" :value="String(n.id)">{{ n.title }}</option>
           </select>
         </label>
-        <p class="hint">分数由共同空闲时间（30 分）、共同兴趣（35 分）、需求标签契合（20 分）和技能互补（15 分）组成。</p>
+        <p id="score-hint" class="hint">分数由共同空闲时间（30 分）、共同兴趣（35 分）、需求标签契合（20 分）和技能互补（15 分）组成。</p>
         <div class="grid matches">
-          <article v-for="m in matches" :key="m.user.id" class="card">
-            <div class="card-top"><span class="badge">搭子候选</span><strong class="score">{{ m.score }} 分</strong></div>
-            <h3>{{ m.user.name }}</h3>
+          <article v-for="m in matches" :key="m.user.id" class="card" :aria-labelledby="'match-' + m.user.id">
+            <div class="card-top"><span class="badge">搭子候选</span><strong class="score">匹配度 {{ m.score }} 分</strong></div>
+            <h3 :id="'match-' + m.user.id">{{ m.user.name }}</h3>
             <p>{{ m.user.bio }}</p>
             <div class="tags"><span v-for="t in [...m.user.personality, ...m.user.interests]" :key="t">{{ t }}</span></div>
             <p v-for="reason in m.reasons" :key="reason" class="reason">{{ reason }}</p>
             <div class="actions">
-              <button @click="showPerson(m.user.id)">查看资料</button>
-              <button class="primary" :disabled="busy" @click="sendInvite(Number(selectedNeed), m.user.id)">邀请 TA</button>
+              <button type="button" :aria-label="`查看资料：${m.user.name}`" @click="showPerson(m.user.id)">查看资料</button>
+              <button type="button" class="primary" :disabled="busy" :aria-label="`邀请 ${m.user.name}`" @click="sendInvite(Number(selectedNeed), m.user.id)">邀请 TA</button>
             </div>
           </article>
         </div>
@@ -669,22 +733,22 @@ onBeforeUnmount(() => {
             <small v-if="i.status === 'rejected' && i.reason">我的拒绝原因：{{ i.reason }}</small>
             <form v-if="rejecting === i.id" class="reject-form" @submit.prevent="handleInvitation(i, 'rejected')">
               <label>拒绝原因（选填，最多 100 字，对方可以看到）
-                <textarea v-model="rejectReason" rows="2" maxlength="100"></textarea>
+                <textarea :id="'reject-reason-' + i.id" v-model="rejectReason" rows="2" maxlength="100"></textarea>
               </label>
-              <div class="preset-list">
-                <button v-for="p in REJECT_PRESETS" :key="p" type="button" @click="rejectReason = p">{{ p }}</button>
+              <div class="preset-list" role="group" aria-label="常用拒绝原因">
+                <button v-for="p in REJECT_PRESETS" :key="p" type="button" @click="choosePreset(i, p)">{{ p }}</button>
               </div>
               <div class="actions">
-                <button type="submit" class="danger" :disabled="busy">确认拒绝</button>
-                <button type="button" @click="rejecting = null">取消</button>
+                <button type="submit" class="danger" :disabled="busy" :aria-label="`确认拒绝 ${i.sender_name} 的邀请`">确认拒绝</button>
+                <button type="button" @click="cancelReject(i)">取消</button>
               </div>
             </form>
           </div>
           <div class="actions">
-            <button @click="showPerson(i.sender_id)">查看资料</button>
+            <button type="button" :aria-label="`查看资料：${i.sender_name}`" @click="showPerson(i.sender_id)">查看资料</button>
             <template v-if="i.status === 'pending' && rejecting !== i.id">
-              <button class="primary" :disabled="busy" @click="handleInvitation(i, 'accepted')">同意</button>
-              <button :disabled="busy" @click="startReject(i)">拒绝</button>
+              <button type="button" class="primary" :disabled="busy" :aria-label="`同意 ${i.sender_name} 的邀请：${i.need_title}`" @click="handleInvitation(i, 'accepted')">同意</button>
+              <button :id="'reject-btn-' + i.id" type="button" :disabled="busy" :aria-label="`拒绝 ${i.sender_name} 的邀请：${i.need_title}`" @click="startReject(i)">拒绝</button>
             </template>
           </div>
         </div>
@@ -698,8 +762,8 @@ onBeforeUnmount(() => {
             <small v-if="i.status === 'rejected'" class="reason">对方的拒绝原因：{{ i.reason || '对方未填写原因' }}</small>
           </div>
           <div class="actions">
-            <button @click="showPerson(i.receiver_id)">查看资料</button>
-            <button v-if="i.status === 'pending'" :disabled="busy" @click="handleInvitation(i, 'withdrawn')">撤回</button>
+            <button type="button" :aria-label="`查看资料：${i.receiver_name}`" @click="showPerson(i.receiver_id)">查看资料</button>
+            <button v-if="i.status === 'pending'" type="button" :disabled="busy" :aria-label="`撤回发给 ${i.receiver_name} 的邀请：${i.need_title}`" @click="handleInvitation(i, 'withdrawn')">撤回</button>
           </div>
         </div>
         <div v-if="!outgoing.length" class="empty">还没有发出邀请。</div>
@@ -709,7 +773,7 @@ onBeforeUnmount(() => {
         <div v-for="i in accepted" :key="i.id" class="list-row">
           <div>
             <strong>{{ i.need_title }}</strong><small>{{ i.sender_name }} 与 {{ i.receiver_name }} 已同意</small>
-            <div v-if="contacts[i.id]" class="contact-list">
+            <div v-if="contacts[i.id]" :id="'contacts-' + i.id" class="contact-list">
               <div v-for="c in contacts[i.id]" :key="c.name">
                 <strong>{{ c.name }}</strong>
                 <span v-if="c.email">邮箱：{{ c.email }}</span><span v-if="c.phone">电话：{{ c.phone }}</span>
@@ -718,7 +782,7 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
-          <button :disabled="busy" :aria-expanded="!!contacts[i.id]" @click="toggleContacts(i)">{{ contacts[i.id] ? '收起联系方式' : '查看联系方式' }}</button>
+          <button type="button" :disabled="busy" :aria-expanded="!!contacts[i.id]" :aria-controls="'contacts-' + i.id" :aria-label="`${contacts[i.id] ? '收起' : '查看'}联系方式：${i.need_title}`" @click="toggleContacts(i)">{{ contacts[i.id] ? '收起联系方式' : '查看联系方式' }}</button>
         </div>
         <div v-if="!accepted.length" class="empty">双方同意后会显示在这里。</div>
       </div>
@@ -804,7 +868,7 @@ onBeforeUnmount(() => {
       <section class="panel">
         <h2>用户管理</h2>
         <p>管理员可查看公开资料和状态，不查看用户联系方式。停用账号会让该用户退出，恢复后可重新登录。</p>
-        <input v-model="adminSearch" placeholder="搜索账号 ID 或昵称" aria-label="搜索账号 ID 或昵称">
+        <input v-model="adminSearch" type="search" placeholder="搜索账号 ID 或昵称" aria-label="搜索账号 ID 或昵称">
         <div v-for="u in filteredAdminUsers" :key="u.id" class="admin-row">
           <div>
             <strong>{{ u.name }}</strong>
@@ -815,7 +879,7 @@ onBeforeUnmount(() => {
           <div class="actions">
             <span v-if="u.admin" class="badge">管理员</span>
             <span v-else-if="u.deleted" class="badge muted">已注销</span>
-            <button v-else :disabled="busy" :class="{ danger: !u.disabled }" @click="adminUserAction(u)">{{ u.disabled ? '恢复账号' : '停用账号' }}</button>
+            <button v-else type="button" :disabled="busy" :class="{ danger: !u.disabled }" :aria-label="`${u.disabled ? '恢复账号' : '停用账号'}：${u.name}`" @click="adminUserAction(u)">{{ u.disabled ? '恢复账号' : '停用账号' }}</button>
           </div>
         </div>
         <div v-if="!filteredAdminUsers.length" class="empty">没有匹配的用户。</div>
@@ -830,9 +894,9 @@ onBeforeUnmount(() => {
             <p>{{ n.description }}</p>
           </div>
           <div class="admin-moderation">
-            <textarea v-model="adminDrafts[n.id]" rows="2" maxlength="500" placeholder="给发布者发送站内私信" aria-label="给发布者的私信内容"></textarea>
-            <button :disabled="busy || !adminDrafts[n.id]?.trim()" @click="adminSendMessage(n)">发送私信</button>
-            <button v-if="n.status !== 'removed'" class="danger" :disabled="busy" @click="adminRemoveNeed(n)">撤下帖子</button>
+            <textarea v-model="adminDrafts[n.id]" rows="2" maxlength="500" placeholder="给发布者发送站内私信" :aria-label="`给 ${n.owner_name} 的私信内容，关于：${n.title}`"></textarea>
+            <button type="button" :disabled="busy || !adminDrafts[n.id]?.trim()" :aria-label="`发送私信给 ${n.owner_name}`" @click="adminSendMessage(n)">发送私信</button>
+            <button v-if="n.status !== 'removed'" type="button" class="danger" :disabled="busy" :aria-label="`撤下帖子：${n.title}`" @click="adminRemoveNeed(n)">撤下帖子</button>
           </div>
         </div>
         <div v-if="!adminData.needs.length" class="empty">暂无需求。</div>
@@ -857,14 +921,14 @@ onBeforeUnmount(() => {
 
   <!-- 弹窗：需求详情 -->
   <div v-if="detail" class="modal-backdrop" @click.self="detail = null">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
-      <button class="close" aria-label="关闭" @click="detail = null">×</button>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detail-title" @keydown="trapFocus">
+      <button type="button" class="close" aria-label="关闭需求详情" @click="detail = null">×</button>
       <span class="badge">{{ detail.category }}</span>
       <h2 id="detail-title">{{ detail.title }}</h2>
       <p>{{ detail.description || '发布者没有填写说明。' }}</p>
       <div class="tags">
         <span v-for="t in detail.tags" :key="t">{{ t }}</span>
-        <span v-for="t in detail.slots" :key="t.day + t.start">{{ t.day }} {{ t.start }}–{{ t.end }}</span>
+        <span v-for="t in detail.slots" :key="t.day + t.start">{{ t.day }} {{ t.start }} 到 {{ t.end }}</span>
       </div>
       <small>{{ detail.owner_name }} · {{ detail.views }} 次浏览 · 发布于 {{ formatTime(detail.created_at) }}</small>
     </div>
@@ -872,8 +936,8 @@ onBeforeUnmount(() => {
 
   <!-- 弹窗：个人资料 -->
   <div v-if="person" class="modal-backdrop" @click.self="person = null">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="person-title">
-      <button class="close" aria-label="关闭" @click="person = null">×</button>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="person-title" @keydown="trapFocus">
+      <button type="button" class="close" aria-label="关闭个人资料" @click="person = null">×</button>
       <h2 id="person-title">{{ person.name }}</h2>
       <p>{{ [person.age ? person.age + ' 岁' : '', person.gender, person.grade, person.hometown ? `家乡：${person.hometown}` : ''].filter(Boolean).join(' · ') }}</p>
       <p>{{ person.bio }}</p>
@@ -887,12 +951,13 @@ onBeforeUnmount(() => {
 
   <!-- 弹窗：个人信息使用说明（内容来自后端 /api/privacy，保证说明与实际行为一致） -->
   <div v-if="showPrivacy" class="modal-backdrop" @click.self="showPrivacy = false">
-    <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
-      <button class="close" aria-label="关闭" @click="showPrivacy = false">×</button>
+    <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="privacy-title" @keydown="trapFocus">
+      <button type="button" class="close" aria-label="关闭个人信息使用说明" @click="showPrivacy = false">×</button>
       <h2 id="privacy-title">个人信息使用说明</h2>
       <p v-if="!privacy">加载中…</p>
       <template v-else>
         <table class="privacy-table">
+          <caption class="sr-only">采集的信息、用途和可见范围</caption>
           <thead><tr><th scope="col">采集的信息</th><th scope="col">用途</th><th scope="col">谁能看到</th></tr></thead>
           <tbody><tr v-for="item in privacy.items" :key="item.data"><td>{{ item.data }}</td><td>{{ item.purpose }}</td><td>{{ item.visible }}</td></tr></tbody>
         </table>
@@ -902,10 +967,12 @@ onBeforeUnmount(() => {
     </div>
   </div>
 
-  <div v-if="toast" class="toast" :class="{ bad: toast.kind === 'error' }" :role="toast.kind === 'error' ? 'alert' : 'status'">
+  <div v-if="toast" class="toast" :class="{ bad: toast.kind === 'error' }">
     <span>{{ toast.text }}</span>
-    <button v-if="toast.undo" class="toast-undo" @click="toast.undo()">撤销</button>
-    <button class="toast-close" aria-label="关闭提示" @click="toast = null">×</button>
+    <button v-if="toast.undo" type="button" class="toast-undo" aria-keyshortcuts="Alt+Z" @click="toast.undo()">撤销（Alt+Z）</button>
+    <button type="button" class="toast-close" aria-label="关闭提示" @click="toast = null">×</button>
   </div>
+  <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{ liveStatus }}</div>
+  <div class="sr-only" role="alert" aria-live="assertive" aria-atomic="true">{{ liveAlert }}</div>
 </div>
 </template>

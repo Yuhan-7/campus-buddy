@@ -7,3 +7,7 @@ backend/src/main/resources/static/
 campus-buddy-local.jar
 desktop/node_modules/
 desktop/release/
+.env
+.DS_Store
+.idea/
+截屏*.png

@@ -123,7 +123,12 @@ python3 scripts/perf_test.py        # 性能与压力测试，需先 docker comp
 
 运行：先 `docker compose up -d` 启动后端，再在 Windows 中进入 `desktop` 执行 `npm install`、`npm start`。适配说明与讲述人测试记录见 `docs/揭榜任务2_视障友好适配.md`。
 
-演示视频（Windows 讲述人读屏、全程键盘操作）：https://weibo.com/7987191018/RsATFmPHO
+演示视频（Windows 讲述人读屏、全程键盘操作，带字幕）：
+
+- 2026-11-22 首次测试：https://weibo.com/7987191018/RsATFmPHO
+- 2026-11-23 补测（对比度主题、放大、断网提示等其余 11 项）：https://weibo.com/7987191018/RsJiS5Snm
+
+测试清单 19 项全部通过。
 
 ## 文档目录
 

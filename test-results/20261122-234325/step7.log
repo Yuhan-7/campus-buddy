@@ -1,0 +1,91 @@
+15:45:55.525 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.campusbuddies.DemoDataTest]: DemoDataTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+15:45:55.618 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.campusbuddies.Application for test class com.campusbuddies.DemoDataTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.16)
+
+2026-11-22T15:45:55.930Z  INFO 80 --- [           main] com.campusbuddies.DemoDataTest           : Starting DemoDataTest using Java 21.0.12.1 with PID 80 (started by root in /app)
+2026-11-22T15:45:55.931Z  INFO 80 --- [           main] com.campusbuddies.DemoDataTest           : No active profile set, falling back to 1 default profile: "default"
+2026-11-22T15:45:56.585Z  INFO 80 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-11-22T15:45:56.718Z  INFO 80 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:demo user=SA
+2026-11-22T15:45:56.720Z  INFO 80 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-11-22T15:45:57.250Z  INFO 80 --- [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-22T15:45:57.250Z  INFO 80 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-22T15:45:57.252Z  INFO 80 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-11-22T15:45:57.267Z  INFO 80 --- [           main] com.campusbuddies.DemoDataTest           : Started DemoDataTest in 1.551 seconds (process running for 2.32)
+2026-11-22T15:46:08.488Z  INFO 80 --- [           main] com.campusbuddies.admin.DemoDataSeeder   : 演示数据写入完成：测试账号 test@buddy.demo / test12345，演示用户 30 个，需求 41 条
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (/root/.m2/repository/net/bytebuddy/byte-buddy-agent/1.17.8/byte-buddy-agent-1.17.8.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+2026-11-22T15:46:09.371Z  INFO 80 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.campusbuddies.ApiFlowTest]: ApiFlowTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-22T15:46:09.374Z  INFO 80 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.campusbuddies.Application for test class com.campusbuddies.ApiFlowTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.16)
+
+2026-11-22T15:46:09.400Z  INFO 80 --- [           main] com.campusbuddies.ApiFlowTest            : Starting ApiFlowTest using Java 21.0.12.1 with PID 80 (started by root in /app)
+2026-11-22T15:46:09.401Z  INFO 80 --- [           main] com.campusbuddies.ApiFlowTest            : No active profile set, falling back to 1 default profile: "default"
+2026-11-22T15:46:09.559Z  INFO 80 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2026-11-22T15:46:09.560Z  INFO 80 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Added connection conn10: url=jdbc:h2:mem:buddy user=SA
+2026-11-22T15:46:09.560Z  INFO 80 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+2026-11-22T15:46:09.650Z  INFO 80 --- [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-22T15:46:09.650Z  INFO 80 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-22T15:46:09.651Z  INFO 80 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-11-22T15:46:09.655Z  INFO 80 --- [           main] com.campusbuddies.ApiFlowTest            : Started ApiFlowTest in 0.277 seconds (process running for 14.708)
+2026-11-22T15:46:18.103Z  INFO 80 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.campusbuddies.QualityRequirementTest]: QualityRequirementTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-22T15:46:18.106Z  INFO 80 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.campusbuddies.Application for test class com.campusbuddies.QualityRequirementTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.16)
+
+2026-11-22T15:46:18.128Z  INFO 80 --- [           main] c.campusbuddies.QualityRequirementTest   : Starting QualityRequirementTest using Java 21.0.12.1 with PID 80 (started by root in /app)
+2026-11-22T15:46:18.128Z  INFO 80 --- [           main] c.campusbuddies.QualityRequirementTest   : No active profile set, falling back to 1 default profile: "default"
+2026-11-22T15:46:18.267Z  INFO 80 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Starting...
+2026-11-22T15:46:18.269Z  INFO 80 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Added connection conn20: url=jdbc:h2:mem:quality user=SA
+2026-11-22T15:46:18.269Z  INFO 80 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Start completed.
+2026-11-22T15:46:18.346Z  INFO 80 --- [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-22T15:46:18.347Z  INFO 80 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-22T15:46:18.347Z  INFO 80 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-11-22T15:46:18.350Z  INFO 80 --- [           main] c.campusbuddies.QualityRequirementTest   : Started QualityRequirementTest in 0.242 seconds (process running for 23.403)
+2026-11-22T15:46:29.061Z  INFO 80 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.campusbuddies.BlackBoxTest]: BlackBoxTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-11-22T15:46:29.063Z  INFO 80 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.campusbuddies.Application for test class com.campusbuddies.BlackBoxTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.5.16)
+
+2026-11-22T15:46:29.083Z  INFO 80 --- [           main] com.campusbuddies.BlackBoxTest           : Starting BlackBoxTest using Java 21.0.12.1 with PID 80 (started by root in /app)
+2026-11-22T15:46:29.083Z  INFO 80 --- [           main] com.campusbuddies.BlackBoxTest           : No active profile set, falling back to 1 default profile: "default"
+2026-11-22T15:46:29.199Z  INFO 80 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Starting...
+2026-11-22T15:46:29.200Z  INFO 80 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-4 - Added connection conn30: url=jdbc:h2:mem:blackbox user=SA
+2026-11-22T15:46:29.201Z  INFO 80 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-4 - Start completed.
+2026-11-22T15:46:29.261Z  INFO 80 --- [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-22T15:46:29.262Z  INFO 80 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-22T15:46:29.262Z  INFO 80 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-11-22T15:46:29.264Z  INFO 80 --- [           main] com.campusbuddies.BlackBoxTest           : Started BlackBoxTest in 0.199 seconds (process running for 34.317)
